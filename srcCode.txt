@@ -1,0 +1,662 @@
+<html>
+    <head>
+        <title>Epic RPG</title>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    </head>
+    <style>
+        #messagesContainer {
+            width:400;
+            height:500;
+            border:black solid 1px;
+            overflow:scroll;
+            padding:10px;
+        }
+        hr {
+            border: #8246b9 dashed;
+        }
+        .reply {
+            color:#8246b9;
+        }
+    </style>
+    <body>
+        <small>Alpha 1.1</small>
+        <div id="messagesContainer"></div>
+        <input id="input" type="text">
+        <br>
+        <a href="https://theadrian.me/epicRpg/srcCode.txt">Source code, pls don't cheat on the game!</a>
+        <script>
+            var container = document.getElementById("messagesContainer");
+            var val = "";
+            var player = new Player();
+
+            $("#input").focus();
+            document.getElementById("input").addEventListener("keyup",(e)=>{
+                if (e.keyCode === 13) {
+                    //console.log($("#input").val());
+                    inputEnter();
+                }
+            })
+
+            document.body.addEventListener("keyup",(e)=>{
+                if (e.keyCode === 191) {
+                    $("#input").focus();
+                }
+            })
+
+            function inputEnter() {
+                $("#messagesContainer").append("<div>-->  "+$("#input").val()+"</div>");
+                container.scrollTop = container.scrollHeight;
+                val = $("#input").val();
+                $("#input").val("");
+                //console.log(val);
+                checkCommand();
+            }
+
+            function checkCommand() {
+                if (val[0]=="r"&&val[1]=="p"&&val[2]=="g"&&val[3]==" ") {
+                    console.log("is command")
+                    checkType();
+                }
+                else {
+                    console.log("is not command");
+                }
+            }
+
+            send("<i>rpg help to check the commands</i>");
+            send("<b>remember to save using <i>rpg save</i></b>");
+            send("<b>You can retrieve your previous save record using <i>rpg load</i></b>")
+
+            function checkType() {
+                //console.log(val);
+                if (/*val.slice(4,10)=="return"*/val.split(" ")[1]=="return"/*val=="rpg return"*/) {
+                    console.log("return command");
+                    console.log(val.slice(11));
+                    send(val.slice(11));
+                }
+                else if (val.split(" ")[1]=="inv") {
+                    console.log("inv command");
+                    sendEmptyLine();
+                    //send("----------------------------------")
+                    sendRule();
+                    send("Your inventory: ");
+                    player.inv.forEach(x=>{
+                        send(x + " x " + player.invQuan[player.inv.indexOf(x)]);
+                    })
+                    //send("----------------------------------")
+                    sendRule();
+                }
+                else if (val.split(" ")[1]=="bank") {
+                    console.log("bank command");
+                    send("Your bank account: $" + player.money);
+                }
+                else if (val.split(" ")[1]=="shop") {
+                    console.log("shop command")
+                    sendEmptyLine();
+                    sendRule();
+                    send("The shop: ");
+                    send("To buy stuff, use \"rpg buy + item number\"")
+                    for (keys in shop) {
+                        // console.log(shop[keys]["name"]);
+                        // console.log(shop[keys]["val"]);
+                        send(keys + ". " + shop[keys]["name"]+" --- price is: $" + shop[keys]["val"]);
+                    }
+                    sendRule();
+                }
+                else if (val.split(" ")[1]=="buy") {
+                    console.log("buy command");
+                    if (val.split(" ")[2]!=undefined) {
+                        console.log("buy " + parseInt(val.split(" ")[2]));
+                        buyStuff(parseInt(val.split(" ")[2]));
+                    }
+                }
+                else if (val.split(" ")[1]=="help") {
+                    sendEmptyLine();
+                    sendRule();
+                    send("Commands: ");
+                    send("rpg inv to see inventory");
+                    send("rpg bank to see your account remaining");
+                    send("rpg shop to check shop");
+                    send("rpg buy [item no.] to buy an item");
+                    send("rpg return [value] to return that value. \(debugging\)")
+                    send("rpg hunt to hunt. You will lose life and there is a 420 seconds \(7 mins\) cooldown to hunt again.")
+                    send("rpg cooldown or rpg cd to check your cooldowns");
+                    send("rpg hp or health to show your health.");
+                    send("rpg p or profile to show your profile \(Your health, inventory, stage\)");
+                    send("rpg heal to use health potion \(heal 20 hp, will not bypass 100 hp\)");
+                    send("rpg use [item] to use the item");
+                    send("rpg itemsGuide or rpg IH to show items' use.")
+                    send("rpg craft [item] to craft the item.");
+                    send("rpg chop to get wood. \(180 seconds / 3 mins\)");
+                    send("rpg recipes to check the recipes.");
+                    send("rpg fish to get fish \(180 seconds / 3 mins\)");
+                    send("rpg sundayLb to get sunday reward ($200) (once per sunday)");
+                    send("rpg save to save progress even if you refreshed the page");
+                    send("rpg load to load your progress that is saved before.");
+                    send("rpg restart to clear previous load record");
+                    send("rpg adv to adventure (get more loot) (1 hr cooldown)")
+                    sendRule();
+                    sendEmptyLine();
+                }
+                else if (val.split(" ")[1]=="hunt") {
+                    hunt();
+                }
+                else if (val.split(" ")[1]=="cooldown"||val.split(" ")[1]=="cd") {
+                    for (keys in player.cooldowns) {
+                        send(keys + " still have " + (Math.round((player.cooldowns[keys]-Date.now())/1000)>0 ? Math.round((player.cooldowns[keys]-Date.now())/1000) : 0) + " seconds");
+                    }
+                }
+                else if (val.split(" ")[1]=="health"||val.split(" ")[1]=="hp") {
+                    send("Your health: " + player.health + " hp");
+                }
+                else if (val.split(" ")[1]=="profile"||val.split(" ")[1]=="p") {
+                    sendEmptyLine();
+                    sendRule();
+                    send("Your profile: ");
+                    send("Your health: " + player.health);
+                    sendRule();
+                    send("Your inventory:")
+                    player.inv.forEach(x=>{
+                        send(x + " x " + player.invQuan[player.inv.indexOf(x)]);
+                    });
+                    sendRule();
+                    send("Your stage: " + player.stage);
+                    sendRule();
+                    sendEmptyLine(); 
+                }
+                else if (val.split(" ")[1]=="use") {
+                    if (val.split(" ")[2]!=undefined) {
+                        use(val.split(" ")[2]);
+                    }
+                    else {
+                        send("Error: use what?")
+                    }
+                }
+                else if (val.split(" ")[1]=="heal") {
+                    use("potion");
+                }
+                else if (val.split(" ")[1]=="itemsGuide"||val.split(" ")[1]=="IH") {
+                    sendEmptyLine();
+                    sendRule();
+                    send("Use rpg use [item id] to use the item")
+                    send("Items: ");
+                    send("Potion -- Heal 20 hp. Can't bypass your health limit.  <code>Id: potion</code>")
+                    send("Apple -- Can increase your health limit by 20. Your health will increase too.  <code>Id: apple</code>");
+                    sendRule();
+                    sendEmptyLine();
+                }
+                else if (val.split(" ")[1]=="craft") {
+                    if (val.split(" ")[2]!=undefined&&val.split(" ")[2]!=" ") {
+                        for (keys in recipes) {
+                            if (keys == val.split(" ")[2]) {
+                                console.log("crafting")
+                                craft(val.split(" ")[2]);
+                                break;
+                            }
+                        }
+                        // send("no such thing to craft");
+                    }
+                    else {
+                        send("craft what?")
+                    }
+                }   
+                else if (val.split(" ")[1]=="chop") {
+                    chop();
+                }
+                else if (val.split(" ")[1]=="recipes") {
+                    sendEmptyLine();
+                    sendRule();
+                    send("<b>Recipes:</b>");
+                    send("Monster heart:");
+                    send(" - eye x 6");
+                    send(" - ectoplasm x 6");
+                    send("<code>Id: monsterHeart</code>")
+                    sendEmptyLine();
+                    send("Epic log:");
+                    send(" - wood x 10");
+                    send("<code>Id: epicLog</code>")
+                    sendEmptyLine();
+                    send("Super log:");
+                    send(" - epicLog x 10");
+                    send("<code>Id: superLog</code>");
+                    sendEmptyLine();
+                    send("Epic fish:");
+                    send(" - fish x 10");
+                    send("<code>Id: epicFish</code>")
+                    sendEmptyLine();
+                    send("Super fish:");
+                    send(" - epicFish x 10");
+                    send("<code>Id: superFish</code>");
+                    sendRule();
+                    sendEmptyLine();
+                }
+                else if (val.split(" ")[1]=="fish") {
+                    fish();
+                }
+                else if (val.split(" ")[1]=="sundayLb") {
+                    if (new Date().getDay()==0 && (new Date().toDateString())!=(player.sundayLb)) {
+                        send("Got reward $200.");
+                        player.money += 200;
+                        player.sundayLb = new Date().toDateString();
+                    }
+                    else if ((new Date().toDateString())==(player.sundayLb)){
+                        send("Got already.");
+                    }
+                    else {
+                        send("not sunday");
+                    }
+                }
+                else if (val.split(" ")[1]=="save") {
+                    save();
+                    console.log("save");
+                }
+                else if (val.split(" ")[1]=="load") {
+                    load();
+                }
+                else if (val.split(" ")[1]=="restart") {
+                    localStorage.setItem("$epicrpg_player",JSON.stringify(new Player()));
+                    send("cleared history, will refresh in 3 seconds");
+                    window.setTimeout(()=>{window.location.reload()},3000);
+                }
+                else if (val.split(" ")[1]=="adv") {
+                    adv();
+                }
+                else {
+                    console.log("don't know what type of command");
+                    send("Error: It is not a command");
+                }
+            }
+
+            var canCraft = true;
+
+            function craft(item) {
+                for (keys in recipes[item]) {
+                    console.log(keys);
+                    console.log(recipes[item][keys]);
+                    if (player.inv.indexOf(keys)!=-1) {
+                        if (player.invQuan[player.inv.indexOf(keys)]<recipes[item][keys]) {
+                            canCraft = false;
+                            break;
+                        }
+                    }
+                    else {
+                        canCraft = false;
+                        break;
+                    }
+                }
+                if (canCraft) {
+                    canCraft = true;
+                    // player.inv.push(item);
+                    // player.invQuan.push(1);
+                    if (player.inv.indexOf(item)!=-1) {
+                        player.invQuan[player.inv.indexOf(item)]++;
+                    }
+                    else {
+                        player.inv.push(item);
+                        player.invQuan.push(1);
+                    }
+                    for (keys in recipes[item]) {
+                        player.invQuan[player.inv.indexOf(keys)]-=recipes[item][keys];
+                        if (player.invQuan[player.inv.indexOf(keys)]<=0) {
+                            player.invQuan.splice(player.inv.indexOf(keys),1);
+                            player.inv.splice(player.inv.indexOf(keys),1);
+                        }
+                    }
+                    send("Crafted 1 " + item + ". The " + item + " is added into your inventory.")
+                }
+                else {
+                    canCraft = true;
+                    send("Don't have enough ingredients");
+                }
+            }
+
+            function save() {
+                localStorage.setItem("$epicrpg_player",JSON.stringify(player));
+                send("saved");
+                // console.log(JSON.stringify(player));
+                // console.log(JSON.parse(JSON.stringify(player)))
+                // encode(JSON.stringify(player));
+            }
+
+            function load() {
+                if (localStorage.getItem("$epicrpg_player")!=null) {
+                    player = JSON.parse(localStorage.getItem("$epicrpg_player")); 
+                    send("loaded");
+                }
+                else {
+                    send("no data");
+                }
+            }
+
+            // function encode(string) {
+            //     let code = [];
+            //     console.log(typeof(string));
+            //     string.split("").forEach(x=>{
+            //         console.log(x);
+            //         code.push(arr2[arr1.indexOf(x)]);
+            //     });
+            //     console.log(code.join(""));
+            //     console.log(typeof(code.join("")));
+            //     send(code.join(""));
+            // }
+
+            // function decode(code) {
+            //     let string = [];
+            //     code = code.match(/.{1,2}/g);
+            //     console.log(code);
+            //     code.forEach(x=>{
+            //         console.log(parseInt(x));
+            //         console.log(arr2.indexOf(parseInt(x)));
+            //         console.log(arr1[arr2.indexOf(parseInt(x))]);
+            //         string.push((arr1[arr2.indexOf(parseInt(x))]));
+            //     })
+            //     console.log(string.join(""));
+            // }
+
+
+            // const arr1 = ["a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z",1,2,3,4,5,6,7,8,9,0,"{","}",",",":",";","\"","'","(",")","A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z"];
+            // const arr2 = [66, 75, 47, 55, 67, 73, 72, 64, 11, 27, 79, 51, 71, 30, 17, 20, 45, 16, 50, 18, 49, 48, 38, 46, 74, 21, 70, 44, 53, 78, 34, 33, 24, 57, 35, 23, 39, 40, 37, 69, 76, 52, 68, 65, 42, 25, 10, 59, 22, 41, 12, 14, 36, 43, 62, 19, 13, 54, 28, 26, 15, 60, 29, 31, 63, 56, 61, 32, 58, 77];
+
+            // decode("395211304852695238171755523752113048604966305269375271173067745269375264676651186452693752501866726752693752646766511864131171111852693752504930556674137552695252375247171751551738305052693952644930185269375247641720526937527311506452694040");
+
+            function chop() {
+                if (player.cooldowns.chop<=Date.now()) {
+                    let woodCount = Math.round(Math.random()*4+1);
+                    // player.inv.push("wood");
+                    // player.invQuan.push(woodCount);
+                    if (player.inv.indexOf("wood")!=-1) {
+                        player.invQuan[player.inv.indexOf("wood")]+=woodCount;
+                    }
+                    else {
+                        player.inv.push("wood");
+                        player.invQuan.push(woodCount);
+                    }
+                    send("You chopped " + woodCount + " wood.");
+                    send("The wood is put into your inventory.");
+                    player.cooldowns.chop = (Date.now()+180000);
+                }
+                else {
+                    send("still in cooldown!");
+                    send("<code>You can use <i>rpg cd or cooldown</i> to check your cooldowns.")
+                }
+            }
+
+            function fish() {
+                if (player.cooldowns.fish<=Date.now()) {
+                    let fishCount = Math.round(Math.random()*4+1);
+                    if (player.inv.indexOf("fish")!=-1) {
+                        player.invQuan[player.inv.indexOf("fish")]+=fishCount;
+                    }
+                    else {
+                        player.inv.push("fish");
+                        player.invQuan.push(fishCount);
+                    }
+                    send("You chopped " + fishCount + " fish.");
+                    send("The fish is put into your inventory.");
+                    player.cooldowns.fish = (Date.now()+180000);
+                }
+                else {
+                    send("still in cooldown!");
+                    send("<code>You can use <i>rpg cd or cooldown</i> to check your cooldowns.")
+                }
+            }
+
+            function use(item) {
+                switch (item) {
+                    case "potion":
+                        if (player.inv.indexOf("potion")!=-1) {
+                            if (player.health<player.healthLimit) {
+                                // player.invQuan[player.inv.indexOf("potion")]--;
+                                if (player.invQuan[player.inv.indexOf("potion")]==1) {
+                                    player.invQuan.splice(player.inv.indexOf("potion"),1);
+                                    player.inv.splice(player.inv.indexOf("potion"),1);
+                                }
+                                else {
+                                    player.invQuan[player.inv.indexOf("potion")]--;
+                                }
+                                player.health+=20;
+                                if (player.health>100) {
+                                    player.health = 100;
+                                }
+                                send("Used health potion. Now health: " + player.health);
+                            }
+                            else {
+                                send("Your health is full!");
+                            }
+                        }
+                        else {
+                            send("you don't have a potion");
+                        }
+                    break;
+                    case "apple":
+                        if (player.inv.indexOf("apple")!=-1) {
+                            player.healthLimit+=20;
+                            player.health+=20;
+                            send("Used! Now your health limit: " + player.healthLimit + " hp.");
+                            if (player.invQuan[player.inv.indexOf("apple")]==1) {
+                                player.invQuan.splice(player.inv.indexOf("apple"),1);
+                                player.inv.splice(player.inv.indexOf("apple"),1);
+                            }
+                            else {
+                                player.invQuan[player.inv.indexOf("apple")]--;
+                            }
+                        }
+                        else {
+                            send("You don't have that item!");
+                        }
+                    break;
+                } 
+            }
+
+            function hunt() {
+                if (player.cooldowns.hunt<=Date.now()) {
+                    send("You are fighting " + enemyList[Math.round(Math.random()*4)]);
+                    player.health -= (stagesEnemyAttack[player.stage] + Math.round(Math.random()*6)-3);
+                    if (player.health>0) {
+                        send("You have " + player.health + "hp left.");
+                        send("You earned $" + stagesEnemyMoney[player.stage]);
+                        player.money += stagesEnemyMoney[player.stage];
+                        send("You have $" + player.money + " left.");
+                        player.cooldowns.hunt = Date.now()+420000;
+                        let loot = stagesEnemyLoot.loots[Math.round(Math.random()*3)];
+                        send("You got " + stagesEnemyLoot[player.stage] + " " + loot + "!");
+                        if (player.inv.indexOf(loot)!=-1) {
+                            player.invQuan[player.inv.indexOf(loot)]+=stagesEnemyLoot[player.stage];
+                        }
+                        else {
+                            player.inv.push(loot);
+                            player.invQuan.push(stagesEnemyLoot[player.stage]);
+                        }
+                        send("You got " + stagesEnemyXp[player.stage] + " xp");
+                        player.xp += stagesEnemyXp[player.stage];
+                        addXp();
+                        send("You are now " + player.xp + " xp.");
+                        send("You are stage " + player.stage);
+                    }
+                    else {
+                        window.setInterval(()=>{
+                            send("You died");
+                        },500);
+                    }
+                }
+                else {
+                    send("still in cooldown: " + Math.round((player.cooldowns.hunt-Date.now())/1000) + " seconds")
+                }
+            }
+
+            function adv() {
+                if (player.cooldowns.adv<=Date.now()) {
+                    send("You are fighting " + enemyList[Math.round(Math.random()*4)]);
+                    player.health -= (stagesEnemyAttack[player.stage]*3 + Math.round(Math.random()*6)-3);
+                    if (player.health>0) {
+                        send("You have " + player.health + "hp left.");
+                        send("You earned $" + stagesEnemyMoney[player.stage]*5);
+                        player.money += stagesEnemyMoney[player.stage] * 5;
+                        send("You have $" + player.money + " left.");
+                        player.cooldowns.adv = Date.now()+3600000;
+                        let loot = stagesEnemyLoot.loots[Math.round(Math.random()*3)];
+                        send("You got " + stagesEnemyLoot[player.stage]*6 + " " + loot + "!");
+                        if (player.inv.indexOf(loot)!=-1) {
+                            player.invQuan[player.inv.indexOf(loot)]+=stagesEnemyLoot[player.stage]*6;
+                        }
+                        else {
+                            player.inv.push(loot);
+                            player.invQuan.push(stagesEnemyLoot[player.stage]*6);
+                        }
+                        send("You got " + stagesEnemyXp[player.stage]*2 + " xp");
+                        player.xp += stagesEnemyXp[player.stage]*2;
+                        addXp();
+                        send("You are now " + player.xp + " xp.");
+                        send("You are stage " + player.stage);
+                    }
+                    else {
+                        restart();
+                        window.setInterval(()=>{
+                            send("You died");
+                        },500);
+                    }
+                }
+                else {
+                    send("still in cooldown: " + Math.round((player.cooldowns.adv-Date.now())/1000) + " seconds")
+                }
+            }
+
+            function addXp() {
+                if (player.xp>=stagesXpNeed[player.stage]) {
+                    player.xp -= stagesXpNeed[player.stage];
+                    player.stage++;
+                }
+            }
+
+            function startTick() {
+                window.setInterval(()=>{
+                    for (keys in player.cooldowns) {
+                        if (player.cooldowns[keys]!=0) {
+                            player.cooldowns[keys]--;
+                        }
+                    }
+                },1000)
+            }
+
+            // startTick();
+
+            function buyStuff(num) {
+                console.log("buy " + shop[num]["name"]);
+                if (player.money>=shop[num]["val"]) {
+                    player.money -= shop[num]["val"];
+                    send("Bought!");
+                    send("Remaining $" + player.money);
+                    //player.inv.push(shop[num]["name"]);
+                    if (player.inv.indexOf(shop[num]["name"])==-1) {
+                        player.inv.push(shop[num]["name"]);
+                        player.invQuan.push(1);
+                    }
+                    else {
+                        player.invQuan[player.inv.indexOf(shop[num]["name"])]++;
+                    }
+                }
+            }
+
+            function send(val) {
+                $("#messagesContainer").append("<div class='reply'><--  "+val+"</div>");
+                container.scrollTop = container.scrollHeight;
+            }
+
+            function sendEmptyLine() {
+                $("#messagesContainer").append("<br>");
+            }
+
+            function sendRule() {
+                $("#messagesContainer").append("<hr>")
+            }
+
+            function Player() {
+                this.inv = [];
+                this.invQuan = [];
+                this.money = 100;
+                this.health = 100;
+                this.stage = 1;
+                this.healthLimit = 100;
+                this.sundayLb = "";
+                this.cooldowns = {
+                    hunt:Date.now(),
+                    chop:Date.now(),
+                    fish:Date.now(),
+                    adv:Date.now()
+                }
+                this.xp = 0;
+            }
+
+            const stagesEnemyAttack = {
+                1:10,
+                2:20,
+                3:35,
+                4:50,
+                5:65
+            }
+            const stagesEnemyMoney = {
+                1:50,
+                2:60,
+                3:75,
+                4:90,
+                5:100
+            }
+
+            const stagesEnemyLoot = {
+                loots:["eye","skull","tongue","ectoplasm"],
+                1:3,
+                2:5,
+                3:7,
+                4:11,
+                5:14
+            }
+            
+            const stagesEnemyXp = {
+                1:10,
+                2:15,
+                3:20,
+                4:25,
+                5:30,
+            }
+
+            const stagesXpNeed = {
+                1:50,
+                2:60,
+                3:70,
+                4:80,
+                5:Infinity
+            }
+
+            const shop = {
+                1:{
+                    name:"potion",
+                    val:50
+                },
+                2:{
+                    name:"apple",
+                    val:400
+                }
+            }
+
+            const recipes = {
+                monsterHeart:{
+                    ectoplasm:6,
+                    eye:6
+                },
+                epicLog:{
+                    wood:10
+                },
+                superLog:{
+                    epicLog:10
+                },
+                epicFish:{
+                    fish:10
+                },
+                superFish:{
+                    epicFish:10
+                }
+            }
+
+            const enemyList = ["devil","vampire","ghost","maniac","dragon"]
+        </script>
+    </body>
+</html>
